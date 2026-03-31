@@ -1,0 +1,14 @@
+{
+  "port_mappings": [
+    {
+      "id": "de6e06f0-d589-311a-d9a9-a372a16d0336",
+      "listenPort": 5173,
+      "wslPort": 5173
+    },
+    {
+      "id": "a209b9d4-3860-5dd3-364d-99b3dea0a8f4",
+      "listenPort": 8000,
+      "wslPort": 8000
+    }
+  ]
+}

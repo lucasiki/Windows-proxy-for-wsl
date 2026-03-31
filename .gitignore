@@ -1,2 +1,4 @@
 /electron-app/
 /go-app/output
+*.log
+*.exe
