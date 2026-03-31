@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -10,8 +11,12 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
 )
+
+//go:embed assets/icon.png
+var iconBytes []byte
 
 // dispatch schedules fn to run on the Fyne main goroutine.
 // Uses a per-app channel + ticker since fyne.Do is only available in Fyne ≥ 2.6.
@@ -43,8 +48,24 @@ func main() {
 	a := app.New()
 	a.Settings().SetTheme(&darkTheme{})
 
+	icon := fyne.NewStaticResource("icon.png", iconBytes)
+	a.SetIcon(icon)
+
 	w := a.NewWindow("WSL Proxy")
 	w.Resize(fyne.NewSize(640, 560))
+	w.SetIcon(icon)
+
+	// System tray — only available on desktop builds (always true on Windows).
+	// Close (X) hides to tray; "Fechar" in tray menu actually quits.
+	if desk, ok := a.(desktop.App); ok {
+		desk.SetSystemTrayIcon(icon)
+		desk.SetSystemTrayMenu(fyne.NewMenu("WSL Proxy",
+			fyne.NewMenuItem("Mostrar", func() { w.Show() }),
+			fyne.NewMenuItemSeparator(),
+			fyne.NewMenuItem("Fechar", func() { a.Quit() }),
+		))
+		w.SetCloseIntercept(func() { w.Hide() })
+	}
 
 	startDispatcher()
 	ui := newAppUI(w)
@@ -64,14 +85,14 @@ type appUI struct {
 
 	// header
 	wslInfoLabel *widget.Label
-	statusLabel  *widget.Label // shows "● PARADO" etc.
+	statusLabel  *canvas.Text // shows "● PARADO" etc. with exact palette color
 
 	// port panel
 	portEntry  *widget.Entry
 	btnAdd     *widget.Button
 	mappingBox *fyne.Container // VBox, rebuilt on change
 	btnStart   *widget.Button
-	btnPause   *widget.Button
+	//btnPause   *widget.Button
 	btnStop    *widget.Button
 
 	// log panel
@@ -140,9 +161,9 @@ func (ui *appUI) buildHeader() fyne.CanvasObject {
 	ui.wslInfoLabel = widget.NewLabel("WSL não detectado")
 	ui.wslInfoLabel.Importance = widget.LowImportance
 
-	ui.statusLabel = widget.NewLabel("● PARADO")
+	ui.statusLabel = canvas.NewText("● PARADO", colorRed)
 	ui.statusLabel.TextStyle = fyne.TextStyle{Bold: true}
-	ui.statusLabel.Importance = widget.LowImportance
+	ui.statusLabel.TextSize = 13
 
 	right := container.NewHBox(ui.wslInfoLabel, ui.statusLabel)
 	bg := canvas.NewRectangle(colorBGSecondary)
@@ -183,14 +204,14 @@ func (ui *appUI) buildPortPanel() fyne.CanvasObject {
 	ui.btnStart = widget.NewButton("▶ Iniciar", ui.onStart)
 	ui.btnStart.Importance = widget.HighImportance
 
-	ui.btnPause = widget.NewButton("⏸ Pausar", ui.onPause)
-	ui.btnPause.Hide()
+	//ui.btnPause = widget.NewButton("⏸ Pausar", ui.onPause)
+	//ui.btnPause.Hide()
 
 	ui.btnStop = widget.NewButton("■ Parar", ui.onStop)
 	ui.btnStop.Importance = widget.DangerImportance
 	ui.btnStop.Disable()
 
-	ctrlRow := container.NewHBox(ui.btnStart, ui.btnPause, ui.btnStop)
+	ctrlRow := container.NewHBox(ui.btnStart, ui.btnStop)
 	controlsRow := container.NewStack(
 		canvas.NewRectangle(colorBGSurface),
 		container.NewPadded(ctrlRow),
@@ -388,8 +409,9 @@ func (ui *appUI) applyState(state ProxyState, info *WSLInfo) {
 
 	switch state {
 	case StateRunning:
-		ui.statusLabel.SetText("● EXECUTANDO")
-		ui.statusLabel.Importance = widget.SuccessImportance
+		ui.statusLabel.Text = "● EXECUTANDO"
+		ui.statusLabel.Color = colorGreen
+		ui.statusLabel.Refresh()
 		if ui.lastWSLInfo != nil {
 			mode := "NAT"
 			if ui.lastWSLInfo.Mode == "mirrored" {
@@ -398,11 +420,13 @@ func (ui *appUI) applyState(state ProxyState, info *WSLInfo) {
 			ui.wslInfoLabel.SetText(fmt.Sprintf("WSL: %s (%s)", ui.lastWSLInfo.IP, mode))
 		}
 	case StatePaused:
-		ui.statusLabel.SetText("● PAUSADO")
-		ui.statusLabel.Importance = widget.WarningImportance
+		ui.statusLabel.Text = "● PAUSADO"
+		ui.statusLabel.Color = colorYellow
+		ui.statusLabel.Refresh()
 	case StateStopped:
-		ui.statusLabel.SetText("● PARADO")
-		ui.statusLabel.Importance = widget.LowImportance
+		ui.statusLabel.Text = "● PARADO"
+		ui.statusLabel.Color = colorRed
+		ui.statusLabel.Refresh()
 		ui.wslInfoLabel.SetText("WSL não detectado")
 		ui.lastWSLInfo = nil
 	}
@@ -423,16 +447,16 @@ func (ui *appUI) applyState(state ProxyState, info *WSLInfo) {
 		}
 	}
 
-	if isStopped {
-		ui.btnPause.Hide()
-	} else {
-		ui.btnPause.Show()
-		if isPaused {
-			ui.btnPause.SetText("▶ Retomar")
-		} else {
-			ui.btnPause.SetText("⏸ Pausar")
-		}
-	}
+	// if isStopped {
+	// 	//ui.btnPause.Hide()
+	// } else {
+	// 	ui.btnPause.Show()
+	// 	if isPaused {
+	// 		ui.btnPause.SetText("▶ Retomar")
+	// 	} else {
+	// 		ui.btnPause.SetText("⏸ Pausar")
+	// 	}
+	// }
 
 	if isStopped {
 		ui.btnStop.Disable()
