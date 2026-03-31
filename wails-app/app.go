@@ -72,6 +72,7 @@ func (a *App) startup(ctx context.Context) {
 			runtime.EventsEmit(ctx, "proxy:state", payload)
 		},
 	)
+	go startTray(ctx) 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

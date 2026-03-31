@@ -33,6 +33,7 @@ func main() {
 
 	err = wails.Run(&options.App{
 		Title:            "WSL Proxy",
+		Frameless:        true,
 		Width:            700,
 		Height:           580,
 		MinWidth:         600,

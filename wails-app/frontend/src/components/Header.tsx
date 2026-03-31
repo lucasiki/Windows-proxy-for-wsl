@@ -1,4 +1,5 @@
 import type { ProxyState, WSLInfo } from '../hooks/useProxy'
+import { Quit, WindowHide } from '../wailsjs/runtime/runtime'
 
 interface Props {
   state: ProxyState
@@ -9,6 +10,17 @@ const statusConfig = {
   stopped: { label: 'PARADO', color: 'var(--red)' },
   running: { label: 'EXECUTANDO', color: 'var(--green)' },
   paused:  { label: 'PAUSADO', color: 'var(--yellow)' },
+}
+
+const btnStyle: React.CSSProperties = {
+  background: 'transparent',
+  color: 'var(--text-muted)',
+  padding: '2px 8px',
+  border: 'none',
+  fontSize: 14,
+  lineHeight: 1,
+  borderRadius: 3,
+  ['--wails-draggable' as string]: 'no-drag',
 }
 
 export function Header({ state, wslInfo }: Props) {
@@ -23,6 +35,7 @@ export function Header({ state, wslInfo }: Props) {
       justifyContent: 'space-between',
       borderBottom: '1px solid var(--border)',
       flexShrink: 0,
+      ['--wails-draggable' as string]: 'drag'
     }}>
       <span style={{ fontWeight: 700, fontSize: 14 }}>WSL Proxy</span>
 
@@ -47,6 +60,10 @@ export function Header({ state, wslInfo }: Props) {
         <span style={{ color, fontWeight: 700, fontSize: 12 }}>
           ● {label}
         </span>
+      </div>
+      <div>
+        <button style={btnStyle} onClick={WindowHide} title="Minimizar para tray">─</button>
+        <button style={{ ...btnStyle, color: 'var(--red)' }} onClick={Quit} title="Fechar">✕</button>
       </div>
     </div>
   )
